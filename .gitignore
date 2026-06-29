@@ -1,0 +1,43 @@
+# ---- Secrets (NEVER commit) ----
+.env
+.env.*
+!.env.example
+*.key
+secrets/
+
+# ---- Data & artifacts (too big / regenerable) ----
+data/
+artifacts/
+*.zip
+*.tsv.gz
+mlruns/
+*.parquet
+*.npy
+*.npz
+*.faiss
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env/
+.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+build/
+*.egg-info/
+
+# ---- Node / frontend ----
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.log
+npm-debug.log*
+
+# ---- OS / editor ----
+.DS_Store
+.vscode/
+.idea/

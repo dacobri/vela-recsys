@@ -1,0 +1,17 @@
+# Lean serving deps for the deployed API (Hugging Face Spaces).
+# Torch/sentence-transformers are NOT needed at serve time: item embeddings are
+# precomputed offline and loaded from .npy, so the server uses faiss on cached
+# vectors (avoids the torch+faiss OpenMP conflict and keeps the image small).
+fastapi>=0.138
+uvicorn[standard]>=0.49
+python-dotenv>=1.0
+httpx>=0.28
+slowapi>=0.1.9
+pandas>=2.2
+numpy>=1.26
+scipy>=1.13
+scikit-learn>=1.5
+pyarrow>=16
+faiss-cpu>=1.8
+igraph>=0.11
+anthropic>=0.40

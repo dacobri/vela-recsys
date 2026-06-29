@@ -1,0 +1,27 @@
+# Vela backend (Python 3.12)
+# --- API ---
+fastapi>=0.138
+uvicorn[standard]>=0.49
+python-dotenv>=1.0
+httpx>=0.28
+slowapi>=0.1.9
+# --- data / ML core ---
+pandas>=2.2
+numpy>=1.26
+scipy>=1.13
+scikit-learn>=1.5
+pyarrow>=16
+# --- recommenders / scale ---
+implicit>=0.7
+faiss-cpu>=1.8
+sentence-transformers>=3.0
+igraph>=0.11
+leidenalg>=0.10
+umap-learn>=0.5
+# --- LLM ---
+anthropic>=0.40
+# --- viz / dev ---
+matplotlib>=3.8
+seaborn>=0.13
+tqdm>=4.66
+pytest>=8.0

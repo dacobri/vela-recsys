@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Vela">
+  <rect width="64" height="64" rx="14" fill="#0B0A12"/>
+  <path d="M16 19 L24 34 L32 49 L40 34 L48 19" stroke="#F2C14E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.6"/>
+  <g fill="#F2C14E">
+    <circle cx="16" cy="19" r="2.8"/>
+    <circle cx="24" cy="34" r="1.9"/>
+    <circle cx="32" cy="49" r="2.4"/>
+    <circle cx="40" cy="34" r="1.9"/>
+    <circle cx="48" cy="19" r="2.8"/>
+  </g>
+  <g stroke="#F2C14E" stroke-width="1.1" stroke-linecap="round">
+    <line x1="16" y1="12.5" x2="16" y2="25.5"/>
+    <line x1="9.5" y1="19" x2="22.5" y2="19"/>
+  </g>
+</svg>
