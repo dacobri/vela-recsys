@@ -141,16 +141,19 @@ class UserUserCF(Recommender):
         nbr, sims = row.indices, row.data
         if nbr.size == 0:
             return []
-        num = sims @ self.Rc[nbr]                       # (1 x n_items)
-        num = np.asarray(num).ravel()
-        den = np.abs(sims).sum()
-        support = np.asarray((self.Rc[nbr] != 0).sum(axis=0)).ravel()
-        scores = self.user_mean[ui] + np.divide(num, den, out=np.zeros_like(num), where=den > 0)
+        nbr_mat = self.Rc[nbr]                           # (k x n_items) centered neighbour ratings
+        num = np.asarray(nbr_mat.T.dot(sims)).ravel()    # Σ_v sim(u,v)(r_vi - r̄_v)
+        support = np.asarray((nbr_mat != 0).sum(axis=0)).ravel()  # # neighbours who rated each item
+        # Global denominator (constant per item) ranks by the weighted-sum of neighbour
+        # deviations. Empirically this beats the per-item-normalised prediction for top-N:
+        # per-item normalisation inflates items rated by a single low-sim neighbour (noise).
+        den = float(np.abs(sims).sum()) or 1.0
+        scores = np.where(support > 0, self.user_mean[ui] + num / den, -np.inf)
         seen = self.seen(user_id) if exclude_seen else set()
         out = []
         for r in np.argsort(-scores):
-            if support[r] == 0:
-                continue
+            if not np.isfinite(scores[r]):
+                break
             item = int(self.maps.items[r])
             if item in seen:
                 continue

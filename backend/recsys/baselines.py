@@ -86,7 +86,11 @@ class RandomRec(Recommender):
         return self
 
     def recommend(self, user_id, k=config.TOP_K, exclude_seen=True):
-        rng = np.random.default_rng(self.random_state + (abs(hash(user_id)) % 100000))
+        try:                                              # int seed -> reproducible across processes
+            uid = int(user_id)
+        except (TypeError, ValueError):
+            uid = abs(hash(user_id)) % 100000
+        rng = np.random.default_rng(self.random_state + uid)
         seen = self.seen(user_id) if exclude_seen else set()
         cands = self.items_[~np.isin(self.items_, list(seen))] if seen else self.items_
         cands = cands.copy()

@@ -29,6 +29,8 @@ from . import tmdb
 
 BASE_METHODS = ["random", "popularity", "damped_mean", "content",
                 "itemcf", "usercf", "mf", "als", "semantic"]
+# methods that support cold-start fold-in (recommend_from); others fall back to semantic
+SESSION_METHODS = {"content", "semantic", "itemcf", "hybrid", "popularity"}
 
 
 class ModelService:
@@ -73,7 +75,18 @@ class ModelService:
             order = self.movies[config.ITEM_COL].to_numpy()
             if not np.array_equal(ids, order):           # realign to movie-table order
                 pos = {int(m): i for i, m in enumerate(ids)}
-                emb = emb[[pos[int(m)] for m in order]]
+                aligned = np.zeros((len(order), emb.shape[1]), dtype=emb.dtype)
+                missing = 0
+                for r, m in enumerate(order):
+                    j = pos.get(int(m))
+                    if j is None:                        # stale cache: zero-fill (don't crash)
+                        missing += 1
+                    else:
+                        aligned[r] = emb[j]
+                if missing:
+                    print(f"[service] WARNING: {missing} movies missing from embedding cache; "
+                          "zero-filled. Re-run scripts/clustering_test.py to refresh.")
+                emb = aligned
             self.emb = emb
             return emb
         # cache miss -> build with torch (offline path), then persist
@@ -145,7 +158,7 @@ class ModelService:
             return self._llm_rerank(user_id, k)
         pool = k * 4 if diversity > 0 else k
         if method == "hybrid":
-            recs = self.hybrid.recommend(user_id, pool)
+            recs = self.hybrid.recommend(user_id, k=pool)
         else:
             model = self.models.get(method)
             if model is None:
@@ -161,11 +174,25 @@ class ModelService:
         cands = [{"id": int(m), "title": self._title(m), "genres": self._genres(m)}
                  for m, _ in base]
         res = self.llm.rerank(self._taste_text(user_id), cands, k=k)
-        score = dict(base)
-        reasons = {int(it["id"]): it.get("reason", "") for it in res["items"]}
-        recs = [(int(it["id"]), score.get(int(it["id"]), 0.0)) for it in res["items"]]
+        valid = {int(c["id"]) for c in cands}            # ground to the candidate set (no hallucinated ids)
+        score, reasons, recs, picked = dict(base), {}, [], set()
+        for it in res["items"]:
+            try:
+                mid = int(it["id"])
+            except (TypeError, ValueError, KeyError):
+                continue
+            if mid in valid and mid not in picked:
+                reasons[mid] = it.get("reason", "")
+                recs.append((mid, score.get(mid, 0.0)))
+                picked.add(mid)
+        for mid, s in base:                              # backfill from base ranking if short
+            if len(recs) >= k:
+                break
+            if mid not in picked:
+                recs.append((mid, s))
+                picked.add(mid)
         return {"user_id": user_id, "method": "llm_rerank", "k": k,
-                "items": self._enrich(recs, reasons), "llm": res.get("llm", False)}
+                "items": self._enrich(recs[:k], reasons), "llm": res.get("llm", False)}
 
     def arena(self, user_id: int, methods: list[str], k: int = 10) -> dict:
         return {"user_id": user_id,
@@ -230,7 +257,9 @@ class ModelService:
         """Maximal Marginal Relevance re-rank: trade relevance for diversity."""
         if not recs or lam <= 0:
             return recs[:k]
-        smax = max(s for _, s in recs) or 1.0
+        scores = [s for _, s in recs]                   # min-max so relevance is in [0,1]
+        lo, hi = min(scores), max(scores)               # (a raw s/max flips sign if scores<0)
+        rng = (hi - lo) or 1.0
         cand, chosen, chosen_rows = list(recs), [], []
         while cand and len(chosen) < k:
             best_i, best_val = 0, -1e18
@@ -238,7 +267,7 @@ class ModelService:
                 row = self._emb_row(mid)
                 sim = max((float(self.emb[row] @ self.emb[cr]) for cr in chosen_rows),
                           default=0.0) if row is not None else 0.0
-                val = (1 - lam) * (s / smax) - lam * sim
+                val = (1 - lam) * ((s - lo) / rng) - lam * sim
                 if val > best_val:
                     best_val, best_i = val, i
             mid, s = cand.pop(best_i)
@@ -299,9 +328,11 @@ class ModelService:
 
     def session_recommend(self, rated, method="hybrid", k=10, diversity=0.0) -> dict:
         rated = [(int(i), float(r)) for i, r in rated]
-        recs = self._profile_recs(rated, method, k * 4 if diversity > 0 else k)
+        used = method if method in SESSION_METHODS else "semantic"   # honest label on fallback
+        recs = self._profile_recs(rated, used, k * 4 if diversity > 0 else k)
         recs = self._mmr(recs, k, diversity) if diversity > 0 else recs[:k]
-        return {"method": method, "k": k, "items": self._enrich(recs), "llm": False}
+        return {"method": used, "requested": method, "k": k,
+                "items": self._enrich(recs), "llm": False}
 
     def foryou(self, user_id=None, rated=None) -> dict:
         """Netflix-style labeled rows for the consumer home (known user OR onboarding)."""
@@ -350,10 +381,11 @@ class _Hybrid:
         self.models = models
         self.weights = weights
 
-    def recommend(self, user_id, k=10, exclude_seen=True, pool=120):
+    def recommend(self, user_id, k=10, exclude_seen=True):
+        depth = max(k, 120)                              # candidate pool depth per base model
         agg: dict[int, float] = {}
         for name, w in self.weights:
-            recs = self.models[name].recommend(user_id, k=pool, exclude_seen=exclude_seen)
+            recs = self.models[name].recommend(user_id, k=depth, exclude_seen=exclude_seen)
             if not recs:
                 continue
             mx = max(s for _, s in recs) or 1.0

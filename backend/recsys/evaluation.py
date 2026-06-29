@@ -60,8 +60,9 @@ def evaluate_model(model: Recommender, ctx: EvalContext, k: int = config.TOP_K,
         rel = ctx.relevant[u]
         if not rel:
             continue
+        n += 1                                    # every user with held-out relevant items counts
         recs = [it for it, _ in model.recommend(u, k=k, exclude_seen=True)]
-        if not recs:
+        if not recs:                              # abstention scores 0 (fair across methods)
             continue
         P += metrics.precision_at_k(recs, rel, k)
         R += metrics.recall_at_k(recs, rel, k)
@@ -72,7 +73,6 @@ def evaluate_model(model: Recommender, ctx: EvalContext, k: int = config.TOP_K,
         H += metrics.hit_rate_at_k(recs, rel, k)
         div_vals.append(metrics.intra_list_diversity(recs, ctx.genre_features, ctx.genre_index))
         all_recs.append(recs)
-        n += 1
 
     n = max(n, 1)
     return {

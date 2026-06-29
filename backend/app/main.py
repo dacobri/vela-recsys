@@ -107,7 +107,8 @@ def movie(mid: int):
 
 
 @app.get("/recommend")
-def recommend(user_id: int, method: str = "usercf", k: int = Query(10, le=50),
+@limiter.limit("60/minute")  # bounds per-IP abuse, incl. the method=llm_rerank path
+def recommend(request: Request, user_id: int, method: str = "usercf", k: int = Query(10, le=50),
               diversity: float = Query(0.0, ge=0.0, le=1.0)):
     try:
         return get_service().recommend(user_id, method, k, diversity)
