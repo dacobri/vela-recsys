@@ -22,13 +22,13 @@ from recsys.collaborative import ItemItemCF, UserUserCF
 from recsys.content import ContentBased
 from recsys.evaluation import run_benchmark
 from recsys.llm import get_llm
-from recsys.matrix_factorization import MF
+from recsys.matrix_factorization import ALS, MF
 from recsys.semantic import SemanticRecommender
 
 from . import tmdb
 
 BASE_METHODS = ["random", "popularity", "damped_mean", "content",
-                "itemcf", "usercf", "mf", "semantic"]
+                "itemcf", "usercf", "mf", "als", "semantic"]
 
 
 class ModelService:
@@ -45,9 +45,12 @@ class ModelService:
         self.meta = self.movies.set_index(config.ITEM_COL)
         self.tmdb_id = {int(m): (int(t) if pd.notna(t) else None)
                         for m, t in zip(self.movies[config.ITEM_COL], self.movies["tmdbId"])}
+        self.posters = self._load_posters()
         self.train, self.test = data.temporal_holdout(ratings, frac=0.2)
 
         emb = self._load_embeddings()
+        self.emb_row = {int(m): i for i, m in enumerate(self.movies[config.ITEM_COL])}
+        self.pop_median = float(self.movies["n_ratings"].median())
         self.models = {
             "random": RandomRec().fit(self.train),
             "popularity": MostPopular().fit(self.train),
@@ -55,7 +58,8 @@ class ModelService:
             "content": ContentBased().fit(self.train, self.movies),
             "itemcf": ItemItemCF(k=30).fit(self.train),
             "usercf": UserUserCF(k=40).fit(self.train),
-            "mf": MF(n_factors=32, n_epochs=12).fit(self.train),
+            "mf": MF(n_factors=50, n_epochs=20).fit(self.train),
+            "als": ALS(factors=64, iterations=20, alpha=20.0).fit(self.train),
             "semantic": SemanticRecommender().fit(self.train, self.movies, embeddings=emb),
         }
         self.hybrid = _Hybrid(self.models)
@@ -80,6 +84,20 @@ class ModelService:
         self.emb = emb
         return emb
 
+    def _load_posters(self) -> dict:
+        """Load the precomputed movieId -> {poster_url, backdrop_url, overview} cache
+        so enrichment never hits TMDB at request time (falls back to live if absent)."""
+        path = config.ARTIFACTS_DIR / f"posters_{self.dataset}.parquet"
+        if not path.exists():
+            return {}
+        df = pd.read_parquet(path)
+
+        def _v(x):  # NaN -> None (NaN is not JSON-serializable)
+            return None if (x is None or (isinstance(x, float) and pd.isna(x))) else x
+
+        return {int(r.movieId): {"poster_url": _v(r.poster_url), "backdrop_url": _v(r.backdrop_url),
+                                 "overview": _v(r.overview)} for r in df.itertuples()}
+
     # -- enrichment ------------------------------------------------------
     def _movie_dict(self, mid: int, score: float | None = None, reason: str | None = None) -> dict:
         row = self.meta.loc[mid]
@@ -92,11 +110,15 @@ class ModelService:
             "backdrop_url": None,
             "overview": None,
         }
-        tid = self.tmdb_id.get(int(mid))
-        if tid:
-            info = tmdb.fetch_movie(tid)
-            if info:
-                d.update({k: info[k] for k in ("poster_url", "backdrop_url", "overview")})
+        cached = self.posters.get(int(mid))
+        if cached is not None:
+            d.update({k: cached.get(k) for k in ("poster_url", "backdrop_url", "overview")})
+        else:
+            tid = self.tmdb_id.get(int(mid))
+            if tid:
+                info = tmdb.fetch_movie(tid)
+                if info:
+                    d.update({k: info[k] for k in ("poster_url", "backdrop_url", "overview")})
         if score is not None:
             d["score"] = round(float(score), 4)
         if reason:
@@ -118,17 +140,20 @@ class ModelService:
             raise KeyError(mid)
         return self._movie_dict(mid)
 
-    def recommend(self, user_id: int, method: str, k: int = 10) -> dict:
-        if method == "hybrid":
-            return {"user_id": user_id, "method": method, "k": k,
-                    "items": self._enrich(self.hybrid.recommend(user_id, k)), "llm": False}
+    def recommend(self, user_id: int, method: str, k: int = 10, diversity: float = 0.0) -> dict:
         if method == "llm_rerank":
             return self._llm_rerank(user_id, k)
-        model = self.models.get(method)
-        if model is None:
-            raise ValueError(f"unknown method {method}")
+        pool = k * 4 if diversity > 0 else k
+        if method == "hybrid":
+            recs = self.hybrid.recommend(user_id, pool)
+        else:
+            model = self.models.get(method)
+            if model is None:
+                raise ValueError(f"unknown method {method}")
+            recs = model.recommend(user_id, pool)
+        recs = self._mmr(recs, k, diversity) if diversity > 0 else recs[:k]
         return {"user_id": user_id, "method": method, "k": k,
-                "items": self._enrich(model.recommend(user_id, k)), "llm": False}
+                "items": self._enrich(recs), "llm": False, "diversity": diversity}
 
     def _llm_rerank(self, user_id: int, k: int) -> dict:
         base = self.models["usercf"].recommend(user_id, k=25) or \
@@ -196,6 +221,112 @@ class ModelService:
         res = self.llm.chat(message, cands, history)
         return {"reply": res["reply"], "llm": res.get("llm", False),
                 "recommendations": self._enrich(base[:8])}
+
+    # -- consumer front door --------------------------------------------
+    def _emb_row(self, mid):
+        return self.emb_row.get(int(mid))
+
+    def _mmr(self, recs, k, lam=0.3):
+        """Maximal Marginal Relevance re-rank: trade relevance for diversity."""
+        if not recs or lam <= 0:
+            return recs[:k]
+        smax = max(s for _, s in recs) or 1.0
+        cand, chosen, chosen_rows = list(recs), [], []
+        while cand and len(chosen) < k:
+            best_i, best_val = 0, -1e18
+            for i, (mid, s) in enumerate(cand):
+                row = self._emb_row(mid)
+                sim = max((float(self.emb[row] @ self.emb[cr]) for cr in chosen_rows),
+                          default=0.0) if row is not None else 0.0
+                val = (1 - lam) * (s / smax) - lam * sim
+                if val > best_val:
+                    best_val, best_i = val, i
+            mid, s = cand.pop(best_i)
+            chosen.append((mid, s))
+            row = self._emb_row(mid)
+            if row is not None:
+                chosen_rows.append(row)
+        return chosen
+
+    def _popularity_list(self, k, exclude=()):
+        ex = {int(i) for i in exclude}
+        out = []
+        for m in self.models["popularity"].ranking_:
+            if int(m) in ex:
+                continue
+            out.append((int(m), float(self.models["popularity"]._score_map.get(int(m), 0.0))))
+            if len(out) >= k:
+                break
+        return out
+
+    def _novel_filter(self, recs, k):
+        gems = [(m, s) for m, s in recs
+                if float(self.meta.loc[m].get("n_ratings", 0)) < self.pop_median]
+        return (gems or recs)[:k]
+
+    def similar_recs(self, mid, k=12):
+        return self.models["semantic"].similar_items(int(mid), k)
+
+    def similar(self, mid, k=12):
+        if mid not in self.meta.index:
+            raise KeyError(mid)
+        return {"id": int(mid), "items": self._enrich(self.similar_recs(mid, k))}
+
+    def popular(self, k=30) -> dict:
+        """Top popular movies — used for the onboarding picker (no user needed)."""
+        return {"items": self._enrich(self._popularity_list(k))}
+
+    def _profile_recs(self, rated, method, k):
+        """Recommend for an ad-hoc (onboarding) user from a list of (item, rating)."""
+        excl = [i for i, _ in rated]
+        if method == "popularity":
+            return self._popularity_list(k, exclude=excl)
+        if method == "hybrid":
+            agg: dict[int, float] = {}
+            for name, w in (("itemcf", 0.5), ("semantic", 0.3), ("popularity", 0.2)):
+                rr = (self._popularity_list(k * 3, exclude=excl) if name == "popularity"
+                      else self.models[name].recommend_from(rated, k=k * 3, exclude_ids=excl))
+                if not rr:
+                    continue
+                mx = max(s for _, s in rr) or 1.0
+                for mid, s in rr:
+                    agg[mid] = agg.get(mid, 0.0) + w * (s / mx)
+            return sorted(agg.items(), key=lambda x: -x[1])[:k]
+        model = self.models.get(method)
+        if model is None or not hasattr(model, "recommend_from"):
+            return self.models["semantic"].recommend_from(rated, k=k, exclude_ids=excl)
+        return model.recommend_from(rated, k=k, exclude_ids=excl)
+
+    def session_recommend(self, rated, method="hybrid", k=10, diversity=0.0) -> dict:
+        rated = [(int(i), float(r)) for i, r in rated]
+        recs = self._profile_recs(rated, method, k * 4 if diversity > 0 else k)
+        recs = self._mmr(recs, k, diversity) if diversity > 0 else recs[:k]
+        return {"method": method, "k": k, "items": self._enrich(recs), "llm": False}
+
+    def foryou(self, user_id=None, rated=None) -> dict:
+        """Netflix-style labeled rows for the consumer home (known user OR onboarding)."""
+        if rated is not None:
+            rated = [(int(i), float(r)) for i, r in rated]
+            excl = [i for i, _ in rated]
+            top = self._profile_recs(rated, "hybrid", 18)
+            liked = sorted(rated, key=lambda x: -x[1])
+            seed = liked[0][0] if liked else None
+            sem = self.models["semantic"].recommend_from(rated, k=40, exclude_ids=excl)
+            trending = self._popularity_list(14, exclude=excl)
+        else:
+            top = self.hybrid.recommend(user_id, 18)
+            ur = self.train[self.train[config.USER_COL] == user_id].sort_values(
+                config.RATING_COL, ascending=False)
+            seed = int(ur.iloc[0][config.ITEM_COL]) if not ur.empty else None
+            sem = self.models["semantic"].recommend(user_id, 40)
+            trending = self._popularity_list(14, exclude=self.models["popularity"].seen(user_id))
+        rows = [{"title": "Top picks for you", "items": self._enrich(top[:18])}]
+        if seed is not None:
+            rows.append({"title": f"Because you liked {self._title(seed)}",
+                         "items": self._enrich(self.similar_recs(seed, 14))})
+        rows.append({"title": "Hidden gems", "items": self._enrich(self._novel_filter(sem, 14))})
+        rows.append({"title": "Trending now", "items": self._enrich(trending)})
+        return {"rows": rows}
 
     # -- small helpers ---------------------------------------------------
     def _title(self, mid) -> str:

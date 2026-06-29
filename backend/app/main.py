@@ -68,6 +68,17 @@ class ChatIn(BaseModel):
     history: list[dict] = []
 
 
+class SessionIn(BaseModel):
+    ratings: list[dict]            # [{"id": int, "rating": float}, ...]
+    method: str = "hybrid"
+    k: int = 10
+    diversity: float = 0.0
+
+
+class ForYouIn(BaseModel):
+    ratings: list[dict]
+
+
 @app.get("/health")
 def health():
     s = get_service()
@@ -82,6 +93,11 @@ def users(limit: int = Query(50, le=200), offset: int = 0):
     return get_service().users(limit, offset)
 
 
+@app.get("/popular")
+def popular(k: int = Query(30, le=100)):
+    return get_service().popular(k)
+
+
 @app.get("/movies/{mid}")
 def movie(mid: int):
     try:
@@ -91,11 +107,37 @@ def movie(mid: int):
 
 
 @app.get("/recommend")
-def recommend(user_id: int, method: str = "usercf", k: int = Query(10, le=50)):
+def recommend(user_id: int, method: str = "usercf", k: int = Query(10, le=50),
+              diversity: float = Query(0.0, ge=0.0, le=1.0)):
     try:
-        return get_service().recommend(user_id, method, k)
+        return get_service().recommend(user_id, method, k, diversity)
     except ValueError as e:
         raise HTTPException(400, str(e))
+
+
+@app.get("/movies/{mid}/similar")
+def similar(mid: int, k: int = Query(12, le=50)):
+    try:
+        return get_service().similar(mid, k)
+    except KeyError:
+        raise HTTPException(404, "movie not found")
+
+
+@app.post("/session/recommend")
+def session_recommend(payload: SessionIn):
+    rated = [(r["id"], r["rating"]) for r in payload.ratings]
+    return get_service().session_recommend(rated, payload.method, payload.k, payload.diversity)
+
+
+@app.post("/session/foryou")
+def session_foryou(payload: ForYouIn):
+    rated = [(r["id"], r["rating"]) for r in payload.ratings]
+    return get_service().foryou(rated=rated)
+
+
+@app.get("/foryou/{user_id}")
+def foryou(user_id: int):
+    return get_service().foryou(user_id=user_id)
 
 
 @app.post("/arena")

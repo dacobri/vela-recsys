@@ -80,35 +80,52 @@ class SemanticRecommender(Recommender):
         }
         return self
 
-    def _profile(self, user_id):
-        mu = self._user_mean.get(user_id, 0.0)
+    def _profile_from(self, rated):
+        if not rated:
+            return None
+        mu = float(np.mean([r for _, r in rated]))
         rows, w = [], []
-        for item, r in self._user_ratings.get(user_id, []):
+        for item, r in rated:
             row = self.i2row_.get(int(item))
             if row is not None:
                 rows.append(row)
                 w.append(r - mu)
         if not rows:
             return None
-        prof = (np.asarray(w, dtype=np.float32) @ self.emb[rows]).astype(np.float32)
+        wv = np.asarray(w, dtype=np.float32)
+        if not np.any(np.abs(wv) > 1e-9):               # all ratings equal -> treat as likes
+            wv = np.ones_like(wv)
+        prof = (wv @ self.emb[rows]).astype(np.float32)
         n = np.linalg.norm(prof)
         return (prof / n).reshape(1, -1) if n > 0 else None
 
-    def recommend(self, user_id, k=config.TOP_K, exclude_seen=True):
-        prof = self._profile(user_id)
-        if prof is None:
-            return []
-        seen = self.seen(user_id) if exclude_seen else set()
-        scores, idx = self.index.search(prof, k + len(seen) + 1)
+    def _profile(self, user_id):
+        return self._profile_from(self._user_ratings.get(user_id, []))
+
+    def _rank(self, prof, exclude, k):
+        scores, idx = self.index.search(prof, k + len(exclude) + 1)
         out = []
         for j, s in zip(idx[0], scores[0]):
             item = int(self.item_ids_[j])
-            if item in seen:
+            if item in exclude:
                 continue
             out.append((item, float(s)))
             if len(out) >= k:
                 break
         return out
+
+    def recommend(self, user_id, k=config.TOP_K, exclude_seen=True):
+        prof = self._profile(user_id)
+        if prof is None:
+            return []
+        return self._rank(prof, self.seen(user_id) if exclude_seen else set(), k)
+
+    def recommend_from(self, rated, k=config.TOP_K, exclude_ids=None):
+        prof = self._profile_from(rated)
+        if prof is None:
+            return []
+        exclude = {int(i) for i, _ in rated} | set(exclude_ids or [])
+        return self._rank(prof, exclude, k)
 
     def similar_items(self, item_id, k=10):
         row = self.i2row_.get(int(item_id))

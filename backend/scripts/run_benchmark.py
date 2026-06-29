@@ -20,7 +20,7 @@ from recsys.baselines import DampedMean, MostPopular, RandomRec  # noqa: E402
 from recsys.collaborative import ItemItemCF, UserUserCF  # noqa: E402
 from recsys.content import ContentBased  # noqa: E402
 from recsys.evaluation import run_benchmark  # noqa: E402
-from recsys.matrix_factorization import MF  # noqa: E402
+from recsys.matrix_factorization import ALS, MF  # noqa: E402
 
 
 def build_models() -> dict:
@@ -29,9 +29,10 @@ def build_models() -> dict:
         "popularity": MostPopular(),
         "damped_mean": DampedMean(),
         "content": ContentBased(),
-        "itemcf": ItemItemCF(k=30),
+        "itemcf": ItemItemCF(k=30, shrink=2.5),
         "usercf": UserUserCF(k=40),
-        "mf": MF(n_factors=32, n_epochs=12),
+        "mf": MF(n_factors=50, n_epochs=20),
+        "als": ALS(factors=64, iterations=20, alpha=20.0),
     }
 
 

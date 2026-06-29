@@ -50,8 +50,9 @@ def _sparsify_topk(sim: np.ndarray, k: int) -> csr_matrix:
 class ItemItemCF(Recommender):
     name = "itemcf"
 
-    def __init__(self, k: int = 30):
+    def __init__(self, k: int = 30, shrink: float = 2.5):
         self.k = k
+        self.shrink = shrink  # denominator shrinkage: damps niche items with little neighbor support
 
     def fit(self, train: pd.DataFrame, movies=None):
         self._record_seen(train)
@@ -69,35 +70,43 @@ class ItemItemCF(Recommender):
         }
         return self
 
-    def _scores(self, user_id):
+    def _scores_from(self, rated):
         n_items = self.maps.n_items
         r = np.zeros(n_items, dtype=np.float64)
         mask = np.zeros(n_items, dtype=np.float64)
-        for item, rating in self._user_ratings.get(user_id, []):
+        for item, rating in rated:
             j = self.maps.i2i.get(int(item))
             if j is not None:
                 r[j] = rating
                 mask[j] = 1.0
         num = self.S @ r
-        den = self.Sabs @ mask
+        den = self.Sabs @ mask + self.shrink
         return np.divide(num, den, out=np.zeros_like(num), where=den > 0)
 
-    def recommend(self, user_id, k=config.TOP_K, exclude_seen=True):
-        if user_id not in self.maps.u2i:
-            return []
-        scores = self._scores(user_id)
-        seen = self.seen(user_id) if exclude_seen else set()
+    def _scores(self, user_id):
+        return self._scores_from(self._user_ratings.get(user_id, []))
+
+    def _rank(self, scores, exclude, k):
         out = []
         for row in np.argsort(-scores):
             if scores[row] <= 0:
                 break
             item = int(self.maps.items[row])
-            if item in seen:
+            if item in exclude:
                 continue
             out.append((item, float(scores[row])))
             if len(out) >= k:
                 break
         return out
+
+    def recommend(self, user_id, k=config.TOP_K, exclude_seen=True):
+        if user_id not in self.maps.u2i:
+            return []
+        return self._rank(self._scores(user_id), self.seen(user_id) if exclude_seen else set(), k)
+
+    def recommend_from(self, rated, k=config.TOP_K, exclude_ids=None):
+        exclude = {int(i) for i, _ in rated} | set(exclude_ids or [])
+        return self._rank(self._scores_from(rated), exclude, k)
 
 
 class UserUserCF(Recommender):

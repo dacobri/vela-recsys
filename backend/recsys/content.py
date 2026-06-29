@@ -57,13 +57,14 @@ class ContentBased(Recommender):
         }
         return self
 
-    def _profile(self, user_id):
-        ratings = self._user_ratings.get(user_id)
-        if not ratings:
+    def _profile_from(self, rated):
+        """Build a profile vector from an arbitrary list of (item, rating) — used
+        both for known users and for new (onboarding/cold-start) users."""
+        if not rated:
             return None
-        mu = self._user_mean.get(user_id, 0.0)
+        mu = float(np.mean([r for _, r in rated]))
         rows, weights = [], []
-        for item, r in ratings:
+        for item, r in rated:
             row = self.i2row_.get(int(item))
             if row is not None:
                 rows.append(row)
@@ -71,29 +72,40 @@ class ContentBased(Recommender):
         if not rows:
             return None
         sub = self.item_features_[rows]                 # sparse (m x d), L2-normalised rows
-        w = np.asarray(weights, dtype=np.float64)       # centered ratings (m,)
+        w = np.asarray(weights, dtype=np.float64)
+        if not np.any(np.abs(w) > 1e-9):                # all ratings equal -> treat as likes
+            w = np.ones_like(w)
         prof = np.asarray(sub.T @ w).ravel()            # dense profile (d,)
         norm = np.linalg.norm(prof)
-        if norm == 0:
-            return None
-        return prof / norm                              # L2 so dot == cosine
+        return prof / norm if norm > 0 else None        # L2 so dot == cosine
 
-    def recommend(self, user_id, k=config.TOP_K, exclude_seen=True):
-        prof = self._profile(user_id)
-        if prof is None:
-            return []
-        scores = np.asarray(self.item_features_ @ prof).ravel()  # cosine to every item
-        seen = self.seen(user_id) if exclude_seen else set()
-        order = np.argsort(-scores)
+    def _profile(self, user_id):
+        return self._profile_from(self._user_ratings.get(user_id))
+
+    def _rank(self, prof, exclude, k):
+        scores = np.asarray(self.item_features_ @ prof).ravel()
         out = []
-        for row in order:
+        for row in np.argsort(-scores):
             item = int(self.item_ids_[row])
-            if item in seen:
+            if item in exclude:
                 continue
             out.append((item, float(scores[row])))
             if len(out) >= k:
                 break
         return out
+
+    def recommend(self, user_id, k=config.TOP_K, exclude_seen=True):
+        prof = self._profile(user_id)
+        if prof is None:
+            return []
+        return self._rank(prof, self.seen(user_id) if exclude_seen else set(), k)
+
+    def recommend_from(self, rated, k=config.TOP_K, exclude_ids=None):
+        prof = self._profile_from(rated)
+        if prof is None:
+            return []
+        exclude = {int(i) for i, _ in rated} | set(exclude_ids or [])
+        return self._rank(prof, exclude, k)
 
     def similar_items(self, item_id, k=10):
         row = self.i2row_.get(int(item_id))
