@@ -91,6 +91,31 @@ def evaluate_model(model: Recommender, ctx: EvalContext, k: int = config.TOP_K,
     }
 
 
+def evaluate_per_user(model: Recommender, ctx: EvalContext, k: int = config.TOP_K,
+                      users: list | None = None) -> pd.DataFrame:
+    """Per-user metric vectors (rows=users) — the basis for CIs + paired tests.
+    Pass the SAME `users` list to every model so comparisons stay paired. Users
+    with held-out relevant items but empty recommendations score 0 (not dropped)."""
+    if users is None:
+        users = [u for u, rel in ctx.relevant.items() if rel]
+    rows = []
+    for u in users:
+        rel = ctx.relevant.get(u)
+        if not rel:
+            continue
+        recs = [it for it, _ in model.recommend(u, k=k, exclude_seen=True)]
+        rows.append({
+            "user": u,
+            "precision": metrics.precision_at_k(recs, rel, k) if recs else 0.0,
+            "recall": metrics.recall_at_k(recs, rel, k) if recs else 0.0,
+            "ndcg": metrics.ndcg_at_k(recs, rel, k) if recs else 0.0,
+            "map": metrics.average_precision_at_k(recs, rel, k) if recs else 0.0,
+            "mrr": metrics.reciprocal_rank(recs, rel, k) if recs else 0.0,
+            "hit": metrics.hit_rate_at_k(recs, rel, k) if recs else 0.0,
+        })
+    return pd.DataFrame(rows).set_index("user")
+
+
 def run_benchmark(models: dict[str, Recommender], train: pd.DataFrame, test: pd.DataFrame,
                   movies: pd.DataFrame, k: int = config.TOP_K,
                   max_users: int | None = None) -> pd.DataFrame:
