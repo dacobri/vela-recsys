@@ -28,9 +28,10 @@ from slowapi.util import get_remote_address  # noqa: E402
 
 from .service import get_service  # noqa: E402
 
-ALLOWED_ORIGINS = ["https://vela-recsys.vercel.app",
+ALLOWED_ORIGINS = ["https://vela-deploy.vercel.app", "https://vela-recsys.vercel.app",
                    "http://localhost:5173", "http://127.0.0.1:5173"]
-ALLOWED_ORIGIN_REGEX = r"https://vela-recsys-[a-z0-9-]+\.vercel\.app"
+# Match Vercel production + preview URLs for either project name.
+ALLOWED_ORIGIN_REGEX = r"https://vela-(deploy|recsys)[a-z0-9-]*\.vercel\.app"
 
 
 def _client_ip(request: Request) -> str:

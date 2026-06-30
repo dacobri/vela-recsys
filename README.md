@@ -13,6 +13,18 @@ on the same data, wrapped in a polished web app with a modern semantic + LLM lay
 > philosophies in the ring on the same data and lets you judge them honestly**,
 > then shows how the winner changes once you value diversity and remove data leakage.
 
+## 🚀 Live demo
+
+| | |
+|---|---|
+| **App** (consumer UI + analytical Lab) | **https://vela-deploy-nu.vercel.app** |
+| **API** (FastAPI, interactive docs) | **https://dacobri-vela.hf.space** · [`/docs`](https://dacobri-vela.hf.space/docs) |
+
+Frontend on Vercel, backend on Hugging Face Spaces (Docker). The API serves the
+MovieLens `ml-latest-small` subset; first request after idle may take ~30s while
+the Space wakes. Open the app, pick a user, and try **Lab → Arena / Evaluation /
+Taste DNA / Galaxy** or the conversational **Chat**.
+
 ## What's inside
 
 | Layer | What |
@@ -55,7 +67,15 @@ MovieLens (GroupLens) — research use; cite Harper & Konstan 2015. IMDb —
 non-commercial. TMDB — "This product uses the TMDB API but is not endorsed or
 certified by TMDB." See `_context/` for the full project analysis and build spec.
 
+## Results (MovieLens small, 590 users, per-user temporal split, K=10)
+
+Best top-N model is **User-CF** (NDCG@10 **0.110**, 95% CI [0.096, 0.123]); item-CF
+follows (0.097) after shrinkage tuning lifted it 5×. At **ml-32m** scale, **item-CF**
+wins and improves with data (NDCG 0.121). Content and semantic models sit near the
+random floor on accuracy but top coverage/novelty — the accuracy-vs-discovery trade-off,
+quantified with bootstrap CIs and Holm-corrected paired tests. Full tables in `results/`.
+
 ## Status
-Backend engine: ✅ implemented, unit-tested, benchmarked. API: ✅ all endpoints live.
-Frontend: ✅ rebranded, builds. Next: tune MF/item-CF, full ml-32m evaluation,
-deploy artifacts, ship to Vercel + HF Spaces.
+✅ **Deployed and final.** Backend engine implemented, unit-tested, benchmarked
+(small + ml-32m with statistical rigor); FastAPI live on HF Spaces; React app live on
+Vercel. See the live links above.
