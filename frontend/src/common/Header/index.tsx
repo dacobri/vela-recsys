@@ -5,10 +5,12 @@ import throttle from "lodash.throttle";
 
 import { Logo } from "..";
 import HeaderNavItem from "./HeaderNavItem";
+import LabMenu from "./LabMenu";
+import TasteButton from "./TasteButton";
 
 import { useGlobalContext } from "@/context/globalContext";
 import { maxWidth, textColor } from "@/styles";
-import { navLinks } from "@/constants";
+import { consumerLinks } from "@/constants";
 import { THROTTLE_DELAY } from "@/utils/config";
 import { cn } from "@/utils/helper";
 
@@ -68,8 +70,8 @@ const Header = () => {
         />
 
         <div className="hidden lg:flex flex-row gap-6 items-center text-navColor">
-          <ul className="flex flex-row gap-6 capitalize text-[14.25px] font-medium">
-            {navLinks.map((link) => {
+          <ul className="flex flex-row items-center gap-6 capitalize text-[14.25px] font-medium">
+            {consumerLinks.map((link) => {
               return (
                 <HeaderNavItem
                   key={link.title}
@@ -79,7 +81,9 @@ const Header = () => {
                 />
               );
             })}
+            <LabMenu />
           </ul>
+          <TasteButton />
         </div>
 
         <button

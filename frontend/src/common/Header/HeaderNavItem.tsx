@@ -20,7 +20,9 @@ const HeaderNavItem = ({ link }: HeaderProps) => {
               : "text-navColor hover:text-primary"
           );
         }}
-        end
+        // Exact match only for "/" so Home isn't always-active; section links
+        // (e.g. /movie) stay highlighted on their detail pages too.
+        end={link.path === "/"}
       >
         {link.title}
       </NavLink>

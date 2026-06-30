@@ -85,13 +85,18 @@ const Galaxy = () => {
       arr.push(p);
       groups.set(p.cluster, arr);
     });
+    // recharts (SVG) can't smoothly draw ~10k points — render a representative
+    // sample (~2.5k total), but keep the TRUE cluster size for the legend.
+    const MAX_RENDER = 2500;
+    const step = Math.max(1, Math.round(data.points.length / MAX_RENDER));
     return Array.from(groups.entries())
       .sort((a, b) => a[0] - b[0])
       .map(([cluster, points]) => ({
         cluster,
         label: data.cluster_labels?.[String(cluster)] ?? `Cluster ${cluster}`,
         color: clusterColor(cluster),
-        points,
+        points: step === 1 ? points : points.filter((_, i) => i % step === 0),
+        count: points.length,
       }));
   }, [data]);
 
@@ -171,6 +176,7 @@ const Galaxy = () => {
                       data={s.points}
                       fill={s.color}
                       fillOpacity={0.78}
+                      isAnimationActive={false}
                       onClick={(point: any) =>
                         setSelected(point?.payload as GalaxyPoint)
                       }
@@ -256,7 +262,7 @@ const Galaxy = () => {
                     />
                     <span className="truncate">{s.label}</span>
                     <span className="ml-auto text-[12px] text-muted">
-                      {s.points.length}
+                      {s.count}
                     </span>
                   </li>
                 ))}

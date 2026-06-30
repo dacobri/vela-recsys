@@ -6,6 +6,7 @@ import {
   UserPicker,
   MethodSelector,
   TopKSlider,
+  DiversitySlider,
   MoviePosterCard,
   Spinner,
   BackendOfflineState,
@@ -23,6 +24,7 @@ const Recommend = () => {
   const [userId, setUserId] = useState<number | null>(null);
   const [method, setMethod] = useState<RecMethod>("hybrid");
   const [k, setK] = useState<number>(12);
+  const [diversity, setDiversity] = useState<number>(0);
 
   const [items, setItems] = useState<VelaMovie[]>([]);
   const [loading, setLoading] = useState(false);
@@ -33,7 +35,7 @@ const Recommend = () => {
       if (userId == null) return;
       setLoading(true);
       setError(null);
-      getRecommendations(userId, method, k, signal)
+      getRecommendations(userId, method, k, diversity, signal)
         .then((res) => setItems(res.items))
         .catch((err) => {
           if (err?.name === "AbortError") return;
@@ -42,7 +44,7 @@ const Recommend = () => {
         })
         .finally(() => setLoading(false));
     },
-    [userId, method, k]
+    [userId, method, k, diversity]
   );
 
   useEffect(() => {
@@ -56,22 +58,30 @@ const Recommend = () => {
       <PageHeader
         icon={LuSparkles}
         title="Recommend"
-        subtitle="Pick a user, choose a method, and dial in how many titles you want. Each card shows its ranking score and — where the model offers one — a reason."
+        subtitle="Pick a user, choose a method, and dial in how many titles you want and how varied they are. Each card shows its ranking score and — where the model offers one — a reason."
       />
 
       <div className={`${sectionCard} mb-8 flex flex-col gap-5`}>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex flex-col gap-1">
             <span className="text-[12.5px] font-medium uppercase tracking-wide text-muted">
               User
             </span>
             <UserPicker value={userId} onChange={setUserId} />
           </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-[12.5px] font-medium uppercase tracking-wide text-muted">
-              Results
-            </span>
-            <TopKSlider value={k} onChange={setK} />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+            <div className="flex flex-col gap-1">
+              <span className="text-[12.5px] font-medium uppercase tracking-wide text-muted">
+                Results
+              </span>
+              <TopKSlider value={k} onChange={setK} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[12.5px] font-medium uppercase tracking-wide text-muted">
+                Serendipity
+              </span>
+              <DiversitySlider value={diversity} onChange={setDiversity} />
+            </div>
           </div>
         </div>
 

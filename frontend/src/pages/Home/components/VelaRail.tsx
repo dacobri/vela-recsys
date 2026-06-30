@@ -33,7 +33,7 @@ const VelaRail: FC<VelaRailProps> = ({ title, userId, method, k = 12 }) => {
     setLoading(true);
     setFailed(false);
 
-    getRecommendations(userId, method, k, controller.signal)
+    getRecommendations(userId, method, k, undefined, controller.signal)
       .then((res) => setMovies(toIMovies(res.items)))
       .catch((err) => {
         if (err?.name === "AbortError") return;

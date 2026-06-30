@@ -26,11 +26,11 @@ const Footer: React.FC = () => {
       >
         <Logo logoColor="text-primary" />
         <ul className="grid grid-cols-3 items-center justify-start font-medium text-gray-300 capitalize md:gap-x-16 md:gap-y-4 md:gap-4 sm:gap-2  xs:gap-[6px] gap-1">
-          {footerLinks.map((title, index) => {
+          {footerLinks.map(({ title, path }) => {
             return (
-              <li key={index} className="text-center">
+              <li key={title} className="text-center">
                 <Link
-                  to="/"
+                  to={path}
                   className="hover:text-primary hover:underline  transition-all duration-300 md:text-[15.25px] sm:text-[14.75px] xs:text-[12.75px] text-[12px] font-nunito "
                 >
                   {title}

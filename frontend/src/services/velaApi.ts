@@ -16,23 +16,30 @@ import type { IMovie } from "@/types";
 /** Recommendation methods supported by the backend. */
 export type RecMethod =
   | "popularity"
+  | "damped_mean"
   | "content"
   | "usercf"
   | "itemcf"
   | "mf"
+  | "als"
   | "semantic"
   | "cluster"
   | "hybrid"
   | "llm_rerank";
 
+/**
+ * All methods, in the order the backend exposes them via `GET /health`. This is
+ * the canonical list the Lab "Recommend" method dropdown iterates over.
+ */
 export const REC_METHODS: RecMethod[] = [
   "popularity",
+  "damped_mean",
   "content",
-  "usercf",
   "itemcf",
+  "usercf",
   "mf",
+  "als",
   "semantic",
-  "cluster",
   "hybrid",
   "llm_rerank",
 ];
@@ -44,7 +51,11 @@ export const METHOD_META: Record<
 > = {
   popularity: {
     label: "Popularity",
-    blurb: "Damped-mean popular picks — the non-personalized baseline.",
+    blurb: "Most-rated popular picks — the non-personalized baseline.",
+  },
+  damped_mean: {
+    label: "Damped Mean",
+    blurb: "Bayesian-shrunk average rating — popularity with confidence.",
   },
   content: {
     label: "Content",
@@ -60,7 +71,11 @@ export const METHOD_META: Record<
   },
   mf: {
     label: "Matrix Factorization",
-    blurb: "Latent-factor model learned from the ratings matrix.",
+    blurb: "Latent-factor model (biased SGD) learned from the ratings matrix.",
+  },
+  als: {
+    label: "ALS",
+    blurb: "Alternating least squares — implicit-feedback matrix factorization.",
   },
   semantic: {
     label: "Semantic",
@@ -112,6 +127,41 @@ export interface RecommendResponse {
   user_id: number;
   method: RecMethod;
   k: number;
+  items: VelaMovie[];
+}
+
+// ── Consumer layer (localStorage profile, no backend auth) ───────────────────
+
+/** GET /popular — a flat list of recognizable popular titles. */
+export interface PopularResponse {
+  items: VelaMovie[];
+}
+
+/** GET /movies/{id}/similar — "more like this" for a movie. */
+export interface SimilarResponse {
+  id: number;
+  items: VelaMovie[];
+}
+
+/** A single labelled, Netflix-style row in the "For You" home feed. */
+export interface ForYouRow {
+  title: string;
+  items: VelaMovie[];
+}
+
+/** POST /session/foryou & GET /foryou/{user_id} — labelled rows feed. */
+export interface ForYouResponse {
+  rows: ForYouRow[];
+}
+
+/** A heart-rated movie in the consumer profile sent to session endpoints. */
+export interface SessionRating {
+  id: number;
+  rating: number;
+}
+
+/** POST /session/recommend — Top-K for an anonymous, localStorage profile. */
+export interface SessionRecommendResponse {
   items: VelaMovie[];
 }
 
@@ -214,11 +264,13 @@ async function request<T>(
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch (err) {
+    // Re-throw aborts unchanged so callers can detect them via `err.name ===
+    // "AbortError"` (effect cleanup / StrictMode double-invoke shouldn't surface
+    // as an error state).
+    if (err instanceof Error && err.name === "AbortError") throw err;
     // Network error / backend not running / CORS.
     throw new VelaApiError(
-      err instanceof Error && err.name === "AbortError"
-        ? "Request cancelled."
-        : "Could not reach the Vela backend. Is it running?",
+      "Could not reach the Vela backend. Is it running?",
       0,
       err
     );
@@ -274,15 +326,79 @@ export function getMovie(id: number, signal?: AbortSignal): Promise<VelaMovie> {
   return request<VelaMovie>(`/movies/${id}`, { signal });
 }
 
-/** GET /recommend?user_id&method&k — Top-K recommendations for a user. */
+/** GET /movies/{id}/similar?k — "more like this" rail for the detail page. */
+export function getSimilar(
+  id: number,
+  k = 14,
+  signal?: AbortSignal
+): Promise<SimilarResponse> {
+  return request<SimilarResponse>(`/movies/${id}/similar${qs({ k })}`, {
+    signal,
+  });
+}
+
+/** GET /popular?k — recognizable popular titles (onboarding grid + trending). */
+export function getPopular(
+  k = 40,
+  signal?: AbortSignal
+): Promise<PopularResponse> {
+  return request<PopularResponse>(`/popular${qs({ k })}`, { signal });
+}
+
+/**
+ * POST /session/foryou — labelled, Netflix-style rows for an anonymous visitor,
+ * built from their localStorage taste profile.
+ */
+export function sessionForYou(
+  ratings: SessionRating[],
+  signal?: AbortSignal
+): Promise<ForYouResponse> {
+  return request<ForYouResponse>(`/session/foryou`, {
+    method: "POST",
+    body: { ratings },
+    signal,
+  });
+}
+
+/**
+ * POST /session/recommend — Top-K for an anonymous visitor's localStorage
+ * profile, with an optional method + diversity knob.
+ */
+export function sessionRecommend(
+  ratings: SessionRating[],
+  options: { method?: RecMethod; k?: number; diversity?: number } = {},
+  signal?: AbortSignal
+): Promise<SessionRecommendResponse> {
+  const { method = "hybrid", k = 14, diversity } = options;
+  return request<SessionRecommendResponse>(`/session/recommend`, {
+    method: "POST",
+    body: { ratings, method, k, diversity },
+    signal,
+  });
+}
+
+/** GET /foryou/{user_id} — labelled rows feed for a known demo user. */
+export function getForYou(
+  userId: number,
+  signal?: AbortSignal
+): Promise<ForYouResponse> {
+  return request<ForYouResponse>(`/foryou/${userId}`, { signal });
+}
+
+/**
+ * GET /recommend?user_id&method&k&diversity — Top-K recommendations for a demo
+ * user. `diversity` (0..1) trades relevance for MMR-style variety; omit it to
+ * use the backend default.
+ */
 export function getRecommendations(
   userId: number,
   method: RecMethod,
   k = 10,
+  diversity?: number,
   signal?: AbortSignal
 ): Promise<RecommendResponse> {
   return request<RecommendResponse>(
-    `/recommend${qs({ user_id: userId, method, k })}`,
+    `/recommend${qs({ user_id: userId, method, k, diversity })}`,
     { signal }
   );
 }

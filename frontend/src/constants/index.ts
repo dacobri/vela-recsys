@@ -1,18 +1,38 @@
 import { AiOutlineHome } from "react-icons/ai";
 import { TbMovie } from "react-icons/tb";
-import { MdOutlineLiveTv } from "react-icons/md";
-import { LuSparkles, LuSwords, LuMessagesSquare } from "react-icons/lu";
+import { LuSparkles, LuSwords, LuMessagesSquare, LuFlaskConical } from "react-icons/lu";
 import { TbChartBar, TbDna2 } from "react-icons/tb";
 import { PiPlanetDuotone } from "react-icons/pi";
 
 import { INavLink } from "../types";
 
-export const navLinks: INavLink[] = [
+/**
+ * Consumer ("front of house") navigation — the streaming-app experience a
+ * casual visitor sees first. No algorithm jargon here.
+ */
+export const consumerLinks: INavLink[] = [
   {
     title: "home",
     path: "/",
     icon: AiOutlineHome,
   },
+  {
+    title: "browse",
+    path: "/browse",
+    icon: TbMovie,
+  },
+  {
+    title: "chat",
+    path: "/chat",
+    icon: LuMessagesSquare,
+  },
+];
+
+/**
+ * Lab ("engine room") navigation — the analytical / transparency tools for
+ * power users and the academic story. Grouped under a labelled "Lab" menu.
+ */
+export const labLinks: INavLink[] = [
   {
     title: "recommend",
     path: "/recommend",
@@ -38,35 +58,32 @@ export const navLinks: INavLink[] = [
     path: "/galaxy",
     icon: PiPlanetDuotone,
   },
-  {
-    title: "chat",
-    path: "/chat",
-    icon: LuMessagesSquare,
-  },
-  {
-    title: "movies",
-    path: "/movie",
-    icon: TbMovie,
-  },
-  {
-    title: "tv series",
-    path: "/tv",
-    icon: MdOutlineLiveTv,
-  },
 ];
 
-export const footerLinks = [
-  "home",
-  "recommend",
-  "arena",
-  "evaluation",
-  "taste dna",
-  "galaxy",
-  "chat",
-  "movies",
-  "tv series",
-  "about",
-  "privacy",
+/** Icon + copy for the "Lab" grouping itself (dropdown trigger / section head). */
+export const labGroup = {
+  title: "lab",
+  label: "Lab",
+  caption: "How Vela works",
+  icon: LuFlaskConical,
+};
+
+/**
+ * Flat list of every primary destination — kept for the mobile sidebar fallback
+ * and anywhere a single ordered list is convenient.
+ */
+export const navLinks: INavLink[] = [...consumerLinks, ...labLinks];
+
+export const footerLinks: { title: string; path: string }[] = [
+  { title: "home", path: "/" },
+  { title: "browse", path: "/browse" },
+  { title: "chat", path: "/chat" },
+  { title: "build taste", path: "/welcome" },
+  { title: "recommend", path: "/recommend" },
+  { title: "arena", path: "/arena" },
+  { title: "evaluation", path: "/evaluation" },
+  { title: "taste dna", path: "/taste-dna" },
+  { title: "galaxy", path: "/galaxy" },
 ];
 
 export const sections = [
