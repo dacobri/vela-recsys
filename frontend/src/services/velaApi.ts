@@ -398,62 +398,120 @@ export function getRecommendations(
   );
 }
 
-/** POST /arena — compare several methods for one user, side by side. */
-export function compareMethods(
+/** POST /arena — compare several methods for one user, side by side.
+ * Backend returns `{ user_id, results: { method: VelaMovie[] } }`; we adapt it to
+ * ordered columns matching the requested method order. */
+export async function compareMethods(
   userId: number,
   methods: RecMethod[],
   k = 10,
   signal?: AbortSignal
 ): Promise<ArenaResponse> {
-  return request<ArenaResponse>(`/arena`, {
-    method: "POST",
-    body: { user_id: userId, methods, k },
-    signal,
-  });
+  const res = await request<{ user_id: number; results: Record<string, VelaMovie[]> }>(
+    `/arena`,
+    { method: "POST", body: { user_id: userId, methods, k }, signal }
+  );
+  return {
+    user_id: res.user_id,
+    k,
+    columns: methods.map((m) => ({ method: m, items: res.results?.[m] ?? [] })),
+  };
 }
 
 /** GET /evaluate?methods&k — offline metrics table for a set of methods. */
-export function getEvaluation(
+export async function getEvaluation(
   methods: RecMethod[],
   k = 10,
   signal?: AbortSignal
 ): Promise<EvaluationResponse> {
-  return request<EvaluationResponse>(
-    `/evaluate${qs({ methods: methods.join(","), k })}`,
+  // Backend returns `{ k, metrics: [{ method, "precision@k": …, … }] }` (one row
+  // per method). Adapt to ordered metric ids + per-method rows, filtered to the
+  // requested methods (in the order requested).
+  const res = await request<{ k: number; metrics: Array<Record<string, unknown>> }>(
+    `/evaluate${qs({ k })}`,
     { signal }
   );
+  const raw = res.metrics ?? [];
+  const byMethod = new Map(raw.map((r) => [String(r.method), r]));
+  const rowsRaw = methods.map((m) => byMethod.get(m)).filter(Boolean) as Array<
+    Record<string, unknown>
+  >;
+  const source = rowsRaw[0] ?? raw[0] ?? {};
+  const metricKeys = Object.keys(source).filter(
+    (key) => key !== "method" && key !== "n_eval_users" && typeof source[key] === "number"
+  );
+  const rows: EvaluationRow[] = rowsRaw.map((r) => ({
+    method: r.method as RecMethod,
+    metrics: Object.fromEntries(metricKeys.map((mk) => [mk, Number(r[mk] ?? 0)])),
+  }));
+  return { k: res.k, metrics: metricKeys, rows };
 }
 
 /** GET /taste/{user_id} — taste DNA (genre weights + summary + top movies). */
-export function getTaste(
+export async function getTaste(
   userId: number,
   signal?: AbortSignal
 ): Promise<TasteResponse> {
-  return request<TasteResponse>(`/taste/${userId}`, { signal });
+  // Backend returns `top_genres` as [genre, weight] pairs; adapt to {genre,weight}.
+  const res = await request<{
+    user_id: number;
+    summary: string;
+    top_genres: [string, number][];
+    top_movies: VelaMovie[];
+  }>(`/taste/${userId}`, { signal });
+  return {
+    user_id: res.user_id,
+    summary: res.summary,
+    genres: (res.top_genres ?? []).map(([genre, weight]) => ({ genre, weight })),
+    top_movies: res.top_movies ?? [],
+  };
 }
 
 /** GET /galaxy?n_clusters — 2D projection of the catalog colored by cluster. */
-export function getGalaxy(
+export async function getGalaxy(
   nClusters?: number,
   signal?: AbortSignal
 ): Promise<GalaxyResponse> {
-  return request<GalaxyResponse>(`/galaxy${qs({ n_clusters: nClusters })}`, {
-    signal,
+  // Backend points use `movieId`; cluster summaries carry `top_genres` we surface
+  // as human cluster labels.
+  const res = await request<{
+    n_clusters: number;
+    points: Array<{ movieId?: number; id?: number; title: string; x: number; y: number; cluster: number }>;
+    clusters?: Array<{ cluster: number; top_genres?: string[] }>;
+  }>(`/galaxy${qs({ n_clusters: nClusters })}`, { signal });
+  const cluster_labels: Record<string, string> = {};
+  (res.clusters ?? []).forEach((c) => {
+    if (c.top_genres?.length) {
+      cluster_labels[String(c.cluster)] = c.top_genres.slice(0, 2).join(" · ");
+    }
   });
+  return {
+    n_clusters: res.n_clusters,
+    cluster_labels,
+    points: (res.points ?? []).map((p) => ({
+      id: p.movieId ?? p.id ?? 0,
+      title: p.title,
+      x: p.x,
+      y: p.y,
+      cluster: p.cluster,
+    })),
+  };
 }
 
-/** POST /chat — conversational recommendations. */
-export function chat(
+/** POST /chat — conversational recommendations. Backend returns
+ * `{ reply, llm, recommendations }`; we surface `recommendations` as `movies`. */
+export async function chat(
   userId: number,
   message: string,
   history: ChatMessage[],
   signal?: AbortSignal
 ): Promise<ChatResponse> {
-  return request<ChatResponse>(`/chat`, {
+  const res = await request<{ reply: string; recommendations?: VelaMovie[] }>(`/chat`, {
     method: "POST",
     body: { user_id: userId, message, history },
     signal,
   });
+  return { reply: res.reply, movies: res.recommendations ?? [] };
 }
 
 // ── Adapter: VelaMovie -> IMovie (template components) ────────────────────────

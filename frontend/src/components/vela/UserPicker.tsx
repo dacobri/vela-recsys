@@ -35,6 +35,7 @@ const UserPicker: FC<UserPickerProps> = ({
   const [loading, setLoading] = useState(true);
   const [errored, setErrored] = useState(false);
   const [open, setOpen] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   const { ref } = useOnClickOutside({
     action: () => setOpen(false),
@@ -43,6 +44,7 @@ const UserPicker: FC<UserPickerProps> = ({
 
   useEffect(() => {
     const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
     setLoading(true);
     setErrored(false);
 
@@ -53,18 +55,26 @@ const UserPicker: FC<UserPickerProps> = ({
           onChange(res.users[0].id);
         }
       })
-      .catch(() => setErrored(true))
+      .catch((err) => {
+        if (err?.name === "AbortError") return;
+        setErrored(true);
+        // the backend loads its models on boot (~15-20s) — auto-retry until ready
+        if (attempt < 8) timer = setTimeout(() => setAttempt((a) => a + 1), 2000);
+      })
       .finally(() => setLoading(false));
 
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      if (timer) clearTimeout(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [limit]);
+  }, [limit, attempt]);
 
   const selected = users.find((u) => u.id === value);
   const buttonLabel = loading
     ? "Loading users…"
     : errored
-    ? "Users unavailable"
+    ? "Retry loading users"
     : selected
     ? userLabel(selected)
     : value != null
@@ -75,8 +85,10 @@ const UserPicker: FC<UserPickerProps> = ({
     <div className={cn("relative", className)} ref={ref}>
       <button
         type="button"
-        disabled={loading || errored}
-        onClick={() => setOpen((p) => !p)}
+        disabled={loading}
+        onClick={() =>
+          errored ? setAttempt((a) => a + 1) : setOpen((p) => !p)
+        }
         className={cn(
           "flex w-full min-w-[200px] items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-[10px] text-[14.5px] text-primary transition-all duration-300 hover:border-accent/60 disabled:opacity-60 disabled:hover:border-border",
           open && "border-accent/60"

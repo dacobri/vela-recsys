@@ -16,19 +16,56 @@ import {
 import { useProfile } from "@/hooks/useProfile";
 import { accentButton, ghostButton, maxWidth } from "@/styles";
 import { IMovie } from "@/types";
-import { cn } from "@/utils/helper";
+import { cn, imageUrl } from "@/utils/helper";
 import logoIcon from "@/assets/svg/vela-icon.svg";
 
 // ── Branded hero for first-time / no-profile visitors ────────────────────────
-const WelcomeHero = ({ hasProfile }: { hasProfile: boolean }) => (
-  <section
-    className="relative flex items-center lg:h-[82vh] sm:h-[600px] xs:h-[500px] h-[460px] w-full overflow-hidden"
-    style={{
-      background:
-        "radial-gradient(1200px 600px at 72% -10%, rgba(242,193,78,0.12), transparent 60%), radial-gradient(900px 520px at 8% 110%, rgba(127,181,255,0.06), transparent 60%)",
-    }}
-  >
-    <div className={cn(maxWidth, "flex flex-col gap-6")}>
+const WelcomeHero = ({ hasProfile }: { hasProfile: boolean }) => {
+  const [posters, setPosters] = useState<string[]>([]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getPopular(28, controller.signal)
+      .then((res) =>
+        setPosters(
+          res.items
+            .map((mv) => mv.poster_url)
+            .filter((p): p is string => Boolean(p))
+            .slice(0, 21)
+        )
+      )
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+
+  return (
+    <section className="relative flex items-center overflow-hidden lg:h-[82vh] sm:h-[600px] xs:h-[520px] h-[480px] w-full">
+      {/* cinematic poster wall */}
+      {posters.length > 0 && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 grid grid-cols-3 content-start gap-2 opacity-[0.18] blur-[1.5px] sm:grid-cols-5 lg:grid-cols-7"
+        >
+          {posters.map((p, i) => (
+            <img
+              key={i}
+              src={imageUrl(p)}
+              alt=""
+              className="aspect-[2/3] w-full rounded-md object-cover"
+            />
+          ))}
+        </div>
+      )}
+      {/* legibility + brand wash */}
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(90deg, rgba(11,10,18,0.97) 0%, rgba(11,10,18,0.85) 42%, rgba(11,10,18,0.5) 100%), radial-gradient(1100px 560px at 75% -10%, rgba(242,193,78,0.12), transparent 60%)",
+        }}
+      />
+    <div className={cn(maxWidth, "relative flex flex-col gap-6")}>
       <m.img
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -68,8 +105,9 @@ const WelcomeHero = ({ hasProfile }: { hasProfile: boolean }) => (
         </Link>
       </m.div>
     </div>
-  </section>
-);
+    </section>
+  );
+};
 
 // ── "Trending" rail from /popular (no-profile state) ─────────────────────────
 const TrendingRail = () => {

@@ -107,7 +107,7 @@ def movie(mid: int):
 
 
 @app.get("/recommend")
-@limiter.limit("60/minute")  # bounds per-IP abuse, incl. the method=llm_rerank path
+@limiter.limit("240/minute")  # generous for interactive use; daily LLM cap guards budget
 def recommend(request: Request, user_id: int, method: str = "usercf", k: int = Query(10, le=50),
               diversity: float = Query(0.0, ge=0.0, le=1.0)):
     try:
@@ -162,6 +162,6 @@ def galaxy():
 
 
 @app.post("/chat")
-@limiter.limit("30/minute")
+@limiter.limit("60/minute")
 def chat(request: Request, payload: ChatIn):
     return get_service().chat(payload.user_id, payload.message, payload.history)

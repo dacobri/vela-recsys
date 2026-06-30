@@ -18,7 +18,7 @@ import { cn } from "@/utils/helper";
 import logoIcon from "@/assets/svg/vela-icon.svg";
 
 const MIN_PICKS = 5;
-const GRID_SIZE = 40;
+const GRID_SIZE = 90;
 
 /** Poster-shaped shimmer used while the popular grid loads. */
 const PosterSkeleton = () => (
