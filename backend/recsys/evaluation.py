@@ -87,6 +87,8 @@ def evaluate_model(model: Recommender, ctx: EvalContext, k: int = config.TOP_K,
         "novelty": metrics.novelty(all_recs, ctx.popularity, ctx.n_users),
         "diversity": float(np.mean(div_vals)) if div_vals else 0.0,
         "personalization": metrics.personalization(all_recs),
+        "arp": metrics.average_recommendation_popularity(all_recs, ctx.popularity, ctx.n_users),
+        "gini": metrics.gini_exposure(all_recs, ctx.catalog),
         "n_eval_users": n,
     }
 

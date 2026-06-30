@@ -160,6 +160,30 @@ def intra_list_diversity(rec_list: Sequence, feature_matrix, item_index: dict) -
     return 1.0 - mean_sim
 
 
+def average_recommendation_popularity(all_recommended, popularity: dict, n_users: int) -> float:
+    """ARP — mean training popularity (fraction of users) of recommended items.
+    A direct popularity-bias read-out: higher = more head-concentrated."""
+    if n_users <= 0:
+        return 0.0
+    vals = [popularity.get(it, 0) / n_users for lst in all_recommended for it in lst]
+    return float(np.mean(vals)) if vals else 0.0
+
+
+def gini_exposure(all_recommended, catalog) -> float:
+    """Gini coefficient of item exposure across all recommendations (0 = perfectly
+    even spread across the catalog, 1 = a few items get all the exposure)."""
+    from collections import Counter
+
+    c = Counter(it for lst in all_recommended for it in lst)
+    x = np.sort(np.array([c.get(i, 0) for i in catalog], dtype=float))
+    s = x.sum()
+    if s == 0:
+        return 0.0
+    n = x.size
+    idx = np.arange(1, n + 1)
+    return float((2 * np.sum(idx * x) / (n * s)) - (n + 1) / n)
+
+
 def personalization(all_recommended: list[list]) -> float:
     """1 - mean pairwise overlap (cosine on binary indicator vectors) between users'
     lists. Near 1 => users receive different recommendations."""

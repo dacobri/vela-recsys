@@ -29,7 +29,7 @@ from recsys.matrix_factorization import ALS, MF  # noqa: E402
 from recsys.semantic import SemanticRecommender  # noqa: E402
 
 ACC = ["precision", "recall", "ndcg", "map", "mrr", "hit"]
-BEYOND = ["coverage", "novelty", "diversity", "personalization"]
+BEYOND = ["coverage", "novelty", "diversity", "personalization", "arp", "gini"]
 
 
 def load_semantic_emb(movies):
@@ -106,15 +106,17 @@ def main():
     lines = [f"# Rigorous evaluation — {args.dataset} (k={args.k}, {len(users)} users)\n",
              f"Best method by NDCG@{args.k}: **{best}**. Significance vs best is a paired "
              "t-test on per-user NDCG, Holm-Bonferroni corrected.\n",
-             "| method | P@k | Recall@k | NDCG@k (95% CI) | MAP | MRR | Coverage | Novelty | Diversity | vs best |",
-             "|---|---|---|---|---|---|---|---|---|---|"]
+             "| method | P@k | Recall@k | NDCG@k (95% CI) | MAP | MRR | Coverage | Novelty | "
+             "Diversity | ARP↓ | Gini↓ | vs best |",
+             "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for name in table.index:
         r = table.loc[name]
         vs = "— (best)" if name == best else (
             f"{stats.stars(sig_map[name][1])} (p={sig_map[name][1]:.3g})")
         lines.append(f"| {name} | {r['precision']:.4f} | {r['recall']:.4f} | "
                      f"{r['ndcg']:.4f} {r['ndcg_CI']} | {r['map']:.4f} | {r['mrr']:.4f} | "
-                     f"{r['coverage']:.3f} | {r['novelty']:.2f} | {r['diversity']:.3f} | {vs} |")
+                     f"{r['coverage']:.3f} | {r['novelty']:.2f} | {r['diversity']:.3f} | "
+                     f"{r['arp']:.4f} | {r['gini']:.3f} | {vs} |")
     (out / f"eval_rigorous_{args.dataset}.md").write_text("\n".join(lines))
     print("\n".join(lines))
 
