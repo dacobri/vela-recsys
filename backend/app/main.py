@@ -157,8 +157,8 @@ def taste(user_id: int):
 
 
 @app.get("/galaxy")
-def galaxy():
-    return get_service().galaxy()
+def galaxy(n_clusters: int = Query(8, ge=2, le=18)):
+    return get_service().galaxy(n_clusters)
 
 
 @app.post("/chat")

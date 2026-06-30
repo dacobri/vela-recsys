@@ -105,7 +105,7 @@ const Galaxy = () => {
       <PageHeader
         icon={PiPlanetDuotone}
         title="Movie Galaxy"
-        subtitle="The catalog projected to two dimensions and colored by cluster — neighbourhoods of films that sit close in embedding space. Click a star to inspect it."
+        subtitle="Every film is turned into a point from its content (title, genres, tags), grouped into clusters of similar films, and laid out in 2D — so two films sitting close are content-similar. Colours mark clusters; the legend names each by its dominant genres. Use the Clusters control to make the grouping coarser or finer, and click any star to inspect that film."
       >
         <div className="flex items-center gap-3">
           <span className="text-[13px] text-muted">Clusters</span>
@@ -162,15 +162,29 @@ const Galaxy = () => {
                   <ZAxis range={[28, 28]} />
                   <Tooltip
                     cursor={{ strokeDasharray: "3 3", stroke: "#2A2540" }}
-                    contentStyle={{
-                      background: "#16131F",
-                      border: "1px solid #2A2540",
-                      borderRadius: 12,
-                      color: "#F6F4FF",
-                    }}
-                    formatter={(_value, _name, props: any) => {
-                      const p = props?.payload as GalaxyPoint | undefined;
-                      return [p?.title ?? "", "Title"];
+                    content={({ active, payload }: any) => {
+                      if (!active || !payload?.length) return null;
+                      const p = payload[0]?.payload as GalaxyPoint | undefined;
+                      if (!p) return null;
+                      const label = data.cluster_labels?.[String(p.cluster)];
+                      return (
+                        <div
+                          style={{
+                            background: "#16131F",
+                            border: "1px solid #2A2540",
+                            borderRadius: 12,
+                            color: "#F6F4FF",
+                            padding: "6px 10px",
+                            fontSize: 12.5,
+                            maxWidth: 220,
+                          }}
+                        >
+                          <div style={{ fontWeight: 500 }}>{p.title}</div>
+                          {label && (
+                            <div style={{ color: "#9A93B2", marginTop: 2 }}>{label}</div>
+                          )}
+                        </div>
+                      );
                     }}
                   />
                   {series.map((s) => (

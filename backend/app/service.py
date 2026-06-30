@@ -36,7 +36,8 @@ SESSION_METHODS = {"content", "semantic", "itemcf", "hybrid", "popularity"}
 class ModelService:
     def __init__(self, dataset: str | None = None):
         self.dataset = dataset or os.environ.get("VELA_DATASET", "small")
-        self._galaxy = None
+        self._galaxy_cache: dict[int, dict] = {}
+        self._galaxy_xy = None
         self._eval = None
         self._load()
 
@@ -225,12 +226,49 @@ class ModelService:
         return {"user_id": user_id, "top_genres": top_genres,
                 "top_movies": top_movies, "summary": summary}
 
-    def galaxy(self) -> dict:
-        if self._galaxy is None:
-            from recsys.clustering import build_galaxy
-            ids = self.movies[config.ITEM_COL].to_numpy()
-            self._galaxy = build_galaxy(self.movies, self.emb, ids, layout="pca")
-        return self._galaxy
+    def galaxy(self, n_clusters: int = 8) -> dict:
+        """2D map of the catalog. Each film is embedded by its content (title +
+        genres + tags), projected to 2D with PCA (computed once), and grouped into
+        exactly ``n_clusters`` k-means clusters (so the dropdown actually changes
+        the map). Clusters are labelled by their most common genres."""
+        from collections import Counter
+
+        n = max(2, min(int(n_clusters), 18))
+        if n in self._galaxy_cache:
+            return self._galaxy_cache[n]
+        if self._galaxy_xy is None:
+            from sklearn.decomposition import PCA
+            self._galaxy_xy = PCA(n_components=2,
+                                  random_state=config.RANDOM_STATE).fit_transform(self.emb).astype(float)
+        from sklearn.cluster import KMeans
+
+        labels = KMeans(n_clusters=n, random_state=config.RANDOM_STATE,
+                        n_init=10).fit_predict(self.emb)
+        xy = self._galaxy_xy
+        mv = self.movies
+        ids = mv[config.ITEM_COL].to_numpy()
+        titles = mv["title_clean"].fillna(mv[config.TITLE_COL]).to_numpy()
+        glist = mv["genres_list"].tolist()
+        points = []
+        for i in range(len(mv)):
+            mid = int(ids[i])
+            cached = self.posters.get(mid)
+            points.append({
+                "movieId": mid, "title": str(titles[i]),
+                "x": float(xy[i, 0]), "y": float(xy[i, 1]), "cluster": int(labels[i]),
+                "poster_url": (cached or {}).get("poster_url"),
+                "genres": list(glist[i] or [])[:3],
+            })
+        clusters = []
+        for c in range(n):
+            idxs = [i for i in range(len(labels)) if labels[i] == c]
+            gen = Counter(g for i in idxs for g in (glist[i] or []))
+            clusters.append({"cluster": c, "size": len(idxs),
+                             "top_genres": [g for g, _ in gen.most_common(3)]})
+        out = {"n_clusters": n, "points": points,
+               "clusters": sorted(clusters, key=lambda c: -c["size"])}
+        self._galaxy_cache[n] = out
+        return out
 
     def chat(self, user_id: int, message: str, history: list | None = None) -> dict:
         # broad + personal candidate pool so mood/vibe requests aren't limited to

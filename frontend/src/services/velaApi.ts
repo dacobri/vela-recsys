@@ -476,7 +476,7 @@ export async function getGalaxy(
   // as human cluster labels.
   const res = await request<{
     n_clusters: number;
-    points: Array<{ movieId?: number; id?: number; title: string; x: number; y: number; cluster: number }>;
+    points: Array<{ movieId?: number; id?: number; title: string; x: number; y: number; cluster: number; poster_url?: string | null; genres?: string[] }>;
     clusters?: Array<{ cluster: number; top_genres?: string[] }>;
   }>(`/galaxy${qs({ n_clusters: nClusters })}`, { signal });
   const cluster_labels: Record<string, string> = {};
@@ -494,6 +494,8 @@ export async function getGalaxy(
       x: p.x,
       y: p.y,
       cluster: p.cluster,
+      poster_url: p.poster_url ?? null,
+      genres: p.genres ?? [],
     })),
   };
 }

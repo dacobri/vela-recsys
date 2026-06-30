@@ -52,7 +52,24 @@ const Arena = () => {
       setLoading(true);
       setError(null);
       compareMethods(userId, methods, k, signal)
-        .then((res) => setColumns(res.columns))
+        .then((res) =>
+          // Each method scores on its own scale (predicted rating, popularity
+          // count, blended 0..1, …), so raw scores aren't comparable across
+          // columns. Normalise each column to its own top pick (=1.0) so the
+          // badges read as "relative strength within this method".
+          setColumns(
+            res.columns.map((col) => {
+              const mx = Math.max(...col.items.map((it) => it.score ?? 0), 1e-9);
+              return {
+                ...col,
+                items: col.items.map((it) => ({
+                  ...it,
+                  score: it.score == null ? undefined : it.score / mx,
+                })),
+              };
+            })
+          )
+        )
         .catch((err) => {
           if (err?.name === "AbortError") return;
           setError(err?.message ?? "Something went wrong.");
@@ -74,7 +91,7 @@ const Arena = () => {
       <PageHeader
         icon={LuSwords}
         title="Algorithm Arena"
-        subtitle="Put methods head-to-head for the same user. Toggle blind mode to hide the labels and judge the rows on the titles alone."
+        subtitle="Each row is one algorithm's top picks for the same user, side by side. Compare which films each surfaces — shared titles mean the methods agree, unique titles reveal a method's character. Scores are shown relative to each method's own top pick (they are not comparable across methods). Toggle blind mode to judge by the titles alone."
       >
         <button
           type="button"
