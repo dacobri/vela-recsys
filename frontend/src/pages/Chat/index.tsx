@@ -123,7 +123,7 @@ const Chat = () => {
                       key={s}
                       type="button"
                       onClick={() => void send(s)}
-                      className="vela-chip rounded-full px-4 py-2 text-[13px] text-gray-200"
+                      className="vela-chip rounded-full px-4 py-2 text-[13px] text-muted"
                     >
                       {s}
                     </button>
@@ -152,7 +152,7 @@ const Chat = () => {
                         "rounded-2xl px-4 py-3 text-[14.5px] leading-relaxed",
                         turn.role === "user"
                           ? "rounded-br-md bg-accent text-accent-text"
-                          : "rounded-bl-md border border-border bg-surface-2 text-gray-100"
+                          : "rounded-bl-md border border-border bg-surface-2 text-primary"
                       )}
                     >
                       {turn.content}
@@ -183,7 +183,7 @@ const Chat = () => {
         </div>
 
         {error && (
-          <p className="border-t border-border bg-surface px-5 py-2 text-[13px] text-accent">
+          <p className="border-t border-border bg-surface px-5 py-2 text-[13px] text-danger">
             {error}
           </p>
         )}

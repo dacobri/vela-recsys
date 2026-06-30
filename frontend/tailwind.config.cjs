@@ -17,6 +17,9 @@ module.exports = {
         "surface-2": "#1E1A2B",
         border: "#2A2540",
         muted: "#9A93B2",
+        // dark-theme-safe error hue — used ONLY for genuine error states, kept
+        // distinct from the single gold brand accent.
+        danger: "#F2848B",
         // keep the template's `black` token but map it to the Vela background
         black: "#0B0A12",
       },
@@ -28,6 +31,7 @@ module.exports = {
         navColor: "#9A93B2",
         muted: "#9A93B2",
         accent: "#F2C14E",
+        danger: "#F2848B",
       },
       backgroundColor: {
         mainColor: "#0B0A12",

@@ -43,7 +43,7 @@ const MovieCard = ({
             <FaYoutube />
           </div>
           {reason && (
-            <p className="text-[11.5px] leading-snug text-gray-200 line-clamp-4">
+            <p className="text-[11.5px] leading-snug text-muted line-clamp-4">
               <span className="text-accent font-semibold">Why: </span>
               {reason}
             </p>
@@ -53,11 +53,20 @@ const MovieCard = ({
 
       <h4
         className={cn(
-          "text-gray-200 text-center cursor-default sm:text-base xs:text-[14.75px] text-[14px] font-medium"
+          "text-primary text-center cursor-default sm:text-base xs:text-[14.75px] text-[14px] font-medium"
         )}
       >
         {(title?.length > 50 ? title.split(":")[0] : title) || name}
       </h4>
+
+      {/* Always-visible reason caption so the "why" is reachable without hover
+          (touch / keyboard), not only in the hover overlay above. */}
+      {reason && (
+        <p className="mt-1 text-center text-[11.5px] leading-snug text-muted line-clamp-2 w-[170px]">
+          <span className="text-accent font-semibold">Why: </span>
+          {reason}
+        </p>
+      )}
     </>
   );
 };

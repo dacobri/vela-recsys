@@ -65,9 +65,7 @@ const Header = () => {
       <nav
         className={cn(maxWidth, `flex justify-between flex-row items-center`)}
       >
-        <Logo
-          logoColor={cn(isNotFoundPage || isActive ? "text-primary" : "text-primary")}
-        />
+        <Logo logoColor="text-primary" />
 
         <div className="hidden lg:flex flex-row gap-6 items-center text-navColor">
           <ul className="flex flex-row items-center gap-6 capitalize text-[14.25px] font-medium">

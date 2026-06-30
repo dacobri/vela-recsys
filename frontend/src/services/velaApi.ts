@@ -23,7 +23,6 @@ export type RecMethod =
   | "mf"
   | "als"
   | "semantic"
-  | "cluster"
   | "hybrid"
   | "llm_rerank";
 
@@ -80,10 +79,6 @@ export const METHOD_META: Record<
   semantic: {
     label: "Semantic",
     blurb: "Sentence-transformer embeddings + FAISS nearest neighbours.",
-  },
-  cluster: {
-    label: "Cluster",
-    blurb: "Leiden catalog clusters — your neighbourhood of the galaxy.",
   },
   hybrid: {
     label: "Hybrid",

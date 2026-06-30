@@ -81,7 +81,7 @@ const MoviePosterCard: FC<MoviePosterCardProps> = ({
                   transition={{ duration: 0.2 }}
                   className="absolute inset-x-2 bottom-12 z-10 rounded-lg border border-border bg-surface-2/95 p-3 text-left shadow-xl backdrop-blur-sm"
                 >
-                  <p className="text-[12px] leading-snug text-gray-200">
+                  <p className="text-[12px] leading-snug text-muted">
                     <span className="font-semibold text-accent">Why: </span>
                     {movie.reason}
                   </p>
@@ -95,7 +95,7 @@ const MoviePosterCard: FC<MoviePosterCardProps> = ({
       <div className="mt-2 px-[2px]">
         <Link
           to={`/movie/${movie.id}`}
-          className="line-clamp-1 text-[14px] font-medium text-gray-100 transition-colors hover:text-accent"
+          className="line-clamp-1 text-[14px] font-medium text-primary transition-colors hover:text-accent"
           title={movie.title}
         >
           {movie.title}

@@ -49,7 +49,7 @@ export const PanelState: FC<PanelStateProps> = ({
       <span
         className={cn(
           "flex h-14 w-14 items-center justify-center rounded-full border border-border bg-surface-2 text-[24px]",
-          icon === "error" ? "text-accent" : "text-muted"
+          icon === "error" ? "text-danger" : "text-muted"
         )}
       >
         <Icon />
@@ -69,14 +69,20 @@ export const PanelState: FC<PanelStateProps> = ({
 export const BackendOfflineState: FC<{
   detail?: string;
   action?: ReactNode;
-}> = ({ detail, action }) => (
-  <PanelState
-    icon="error"
-    title="Can't reach the Vela backend"
-    message={
-      detail ||
-      "Start the FastAPI server (default http://localhost:8000) and this page will come alive. Set VITE_API_URL in .env.local to point elsewhere."
-    }
-    action={action}
-  />
-);
+}> = ({ detail, action }) => {
+  // Developer-only guidance (how to start the backend) is shown in dev builds.
+  // Shipped builds get a friendly, generic message instead.
+  const devDetail =
+    "Start the FastAPI server (default http://localhost:8000) and this page will come alive. Set VITE_API_URL in .env.local to point elsewhere.";
+  const fallback = import.meta.env.DEV
+    ? devDetail
+    : "This view is temporarily unavailable. Please try again in a moment.";
+  return (
+    <PanelState
+      icon="error"
+      title={import.meta.env.DEV ? "Can't reach the Vela backend" : "Something went wrong"}
+      message={detail || fallback}
+      action={action}
+    />
+  );
+};

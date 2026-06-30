@@ -57,7 +57,7 @@ const ForYouHero: FC<ForYouHeroProps> = ({
             {movie.title}
           </h1>
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13.5px] text-gray-300">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13.5px] text-muted">
             {movie.year && <span>{movie.year}</span>}
             {movie.genres?.length > 0 && (
               <>
@@ -68,7 +68,7 @@ const ForYouHero: FC<ForYouHeroProps> = ({
           </div>
 
           {movie.overview && (
-            <p className="max-w-[540px] text-[14.5px] leading-relaxed text-gray-200 line-clamp-3 sm:text-[15.5px]">
+            <p className="max-w-[540px] text-[14.5px] leading-relaxed text-primary line-clamp-3 sm:text-[15.5px]">
               {movie.overview}
             </p>
           )}
@@ -82,7 +82,7 @@ const ForYouHero: FC<ForYouHeroProps> = ({
             </Link>
             <Link
               to={`/movie/${movie.id}`}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-background/40 px-6 py-[10px] text-[15px] font-medium text-gray-100 backdrop-blur-sm transition-all duration-300 hover:border-accent/60 hover:text-primary"
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-background/40 px-6 py-[10px] text-[15px] font-medium text-primary backdrop-blur-sm transition-all duration-300 hover:border-accent/60 hover:text-primary"
             >
               <LuInfo /> More info
             </Link>

@@ -58,9 +58,13 @@ const BAR_COLORS = [
 const Evaluation = () => {
   const [methods] = useState<RecMethod[]>([
     "popularity",
+    "damped_mean",
     "content",
     "itemcf",
+    "usercf",
     "mf",
+    "als",
+    "semantic",
     "hybrid",
   ]);
   const [k, setK] = useState<number>(10);
@@ -135,7 +139,11 @@ const Evaluation = () => {
       ) : !data || data.rows.length === 0 ? (
         <PanelState
           title="No evaluation data"
-          message="The backend returned no metrics. Make sure the evaluation endpoint is wired up."
+          message={
+            import.meta.env.DEV
+              ? "The backend returned no metrics. Make sure the evaluation endpoint is wired up."
+              : "There are no metrics to show right now."
+          }
         />
       ) : (
         <div className="flex flex-col gap-8">
@@ -179,7 +187,7 @@ const Evaluation = () => {
                             "px-5 py-4 text-right text-[14px] tabular-nums",
                             isBest
                               ? "font-bold text-accent"
-                              : "text-gray-200"
+                              : "text-muted"
                           )}
                         >
                           {value !== undefined ? value.toFixed(4) : "—"}
@@ -205,7 +213,7 @@ const Evaluation = () => {
                     type="button"
                     onClick={() => setActiveMetric(metric)}
                     className={cn(
-                      "vela-chip rounded-full px-3 py-[5px] text-[12.5px] font-medium text-gray-200",
+                      "vela-chip rounded-full px-3 py-[5px] text-[12.5px] font-medium text-muted",
                       metric === activeMetric && "vela-chip--active"
                     )}
                   >

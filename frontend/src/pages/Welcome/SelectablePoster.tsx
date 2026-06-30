@@ -62,7 +62,7 @@ const SelectablePoster: FC<SelectablePosterProps> = ({
         "absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur-sm transition-all duration-300",
         selected
           ? "border-accent bg-accent text-accent-text"
-          : "border-border bg-background/70 text-gray-200 group-hover:border-accent/60 group-hover:text-accent"
+          : "border-border bg-background/70 text-muted group-hover:border-accent/60 group-hover:text-accent"
       )}
     >
       <LuHeart className={cn(selected && "fill-current")} />
@@ -70,7 +70,7 @@ const SelectablePoster: FC<SelectablePosterProps> = ({
 
     {/* title + year */}
     <span className="absolute inset-x-0 bottom-0 p-2.5">
-      <span className="line-clamp-2 text-[12.5px] font-medium leading-tight text-gray-50">
+      <span className="line-clamp-2 text-[12.5px] font-medium leading-tight text-primary">
         {movie.title}
       </span>
       {movie.year && (

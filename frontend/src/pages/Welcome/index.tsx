@@ -114,7 +114,7 @@ const Welcome = () => {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="max-w-[560px] text-[15px] leading-relaxed text-gray-300 sm:text-[16px]"
+            className="max-w-[560px] text-[15px] leading-relaxed text-muted sm:text-[16px]"
           >
             Heart at least {MIN_PICKS} films you enjoy and Vela will build a home
             screen around your taste. You can refine it any time.

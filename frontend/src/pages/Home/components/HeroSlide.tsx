@@ -41,7 +41,7 @@ const HeroSlide = ({ movie }: { movie: IMovie }) => {
         variants={staggerContainer(0.2, 0.3)}
         initial="hidden"
         animate="show"
-        className="text-gray-300 sm:max-w-[80vw] max-w-[90vw]  md:max-w-[420px] font-nunito flex flex-col sm:gap-5 xs:gap-3 gap-[10px] sm:mb-8"
+        className="text-muted sm:max-w-[80vw] max-w-[90vw]  md:max-w-[420px] font-nunito flex flex-col sm:gap-5 xs:gap-3 gap-[10px] sm:mb-8"
       >
         <m.h2 variants={fadeDown} className={cn(mainHeading)}>
           {title}

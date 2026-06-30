@@ -24,7 +24,8 @@ const Recommend = () => {
   const [userId, setUserId] = useState<number | null>(null);
   const [method, setMethod] = useState<RecMethod>("hybrid");
   const [k, setK] = useState<number>(12);
-  const [diversity, setDiversity] = useState<number>(0);
+  // Default to a small non-zero λ so the diversity feature is visible by default.
+  const [diversity, setDiversity] = useState<number>(0.2);
 
   const [items, setItems] = useState<VelaMovie[]>([]);
   const [loading, setLoading] = useState(false);
@@ -78,7 +79,7 @@ const Recommend = () => {
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-[12.5px] font-medium uppercase tracking-wide text-muted">
-                Serendipity
+                Diversity (λ)
               </span>
               <DiversitySlider value={diversity} onChange={setDiversity} />
             </div>

@@ -102,24 +102,26 @@ const Arena = () => {
             Methods · pick {MIN_METHODS}–{MAX_METHODS} ({methods.length} selected)
           </span>
           <div className="flex flex-wrap gap-2">
-            {REC_METHODS.map((m) => {
+            {REC_METHODS.map((m, i) => {
               const active = methods.includes(m);
               const atMax = !active && methods.length >= MAX_METHODS;
               const atMin = active && methods.length <= MIN_METHODS;
+              // In blind mode, never expose the method identity (label or
+              // tooltip blurb) — that would leak the answer being judged.
               return (
                 <button
                   key={m}
                   type="button"
                   disabled={atMax}
-                  title={METHOD_META[m].blurb}
+                  title={blind ? undefined : METHOD_META[m].blurb}
                   onClick={() => toggleMethod(m)}
                   className={cn(
-                    "vela-chip rounded-full px-4 py-[7px] text-[13.5px] font-medium text-gray-200 disabled:opacity-40 disabled:hover:border-border",
+                    "vela-chip rounded-full px-4 py-[7px] text-[13.5px] font-medium text-muted disabled:opacity-40 disabled:hover:border-border",
                     active && "vela-chip--active",
                     atMin && "cursor-default"
                   )}
                 >
-                  {METHOD_META[m].label}
+                  {blind ? `Option ${i + 1}` : METHOD_META[m].label}
                 </button>
               );
             })}

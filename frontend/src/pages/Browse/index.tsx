@@ -88,7 +88,7 @@ const Browse = () => {
                 type="button"
                 onClick={() => setGenre(g)}
                 className={cn(
-                  "vela-chip rounded-full px-3.5 py-[6px] text-[13px] font-medium text-gray-200",
+                  "vela-chip rounded-full px-3.5 py-[6px] text-[13px] font-medium text-muted",
                   g === genre && "vela-chip--active"
                 )}
               >

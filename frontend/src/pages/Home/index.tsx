@@ -49,7 +49,7 @@ const WelcomeHero = ({ hasProfile }: { hasProfile: boolean }) => (
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
-        className="max-w-[560px] text-[15.5px] leading-relaxed text-gray-300"
+        className="max-w-[560px] text-[15.5px] leading-relaxed text-muted"
       >
         Tell Vela a handful of movies you love and it builds a home screen around
         your taste — then keeps learning as you explore.

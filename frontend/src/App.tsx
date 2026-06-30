@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 
 import {
   Header,
@@ -33,6 +33,11 @@ const Galaxy = lazy(() => import("./pages/Galaxy"));
 const Chat = lazy(() => import("./pages/Chat"));
 
 const App = () => {
+  // The Welcome page has its own fixed sticky CTA bar pinned to the bottom; the
+  // global footer would collide with it, so we hide the footer on /welcome.
+  const { pathname } = useLocation();
+  const hideFooter = pathname === "/welcome";
+
   return (
     <>
       <VideoModal />
@@ -67,7 +72,7 @@ const App = () => {
         </ScrollToTop>
       </main>
 
-      <Footer />
+      {!hideFooter && <Footer />}
     </>
   );
 };

@@ -55,6 +55,7 @@ const VideoModal = () => {
           >
             <button
               type="button"
+              aria-label="Close trailer"
               className="absolute -right-8 -top-6 text-gray-300 text-[28px] z-50 "
               onClick={closeModal}
             >

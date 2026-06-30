@@ -105,7 +105,7 @@ const TasteDNA = () => {
                         tick={{ fill: "#9A93B2", fontSize: 12 }}
                       />
                       <PolarRadiusAxis
-                        tick={{ fill: "#5b5570", fontSize: 10 }}
+                        tick={{ fill: "#8b84a3", fontSize: 10 }}
                         axisLine={false}
                         domain={[0, 100]}
                       />
@@ -138,7 +138,7 @@ const TasteDNA = () => {
               <h3 className="mb-3 text-[18px] font-semibold text-primary">
                 Taste summary
               </h3>
-              <p className="text-[14.5px] leading-relaxed text-gray-300">
+              <p className="text-[14.5px] leading-relaxed text-primary">
                 {data.summary || "No summary available for this user."}
               </p>
 
@@ -147,7 +147,7 @@ const TasteDNA = () => {
                   {radarData.map((g) => (
                     <div key={g.genre} className="flex flex-col gap-1">
                       <div className="flex items-center justify-between text-[13px]">
-                        <span className="text-gray-200">{g.genre}</span>
+                        <span className="text-muted">{g.genre}</span>
                         <span className="text-muted tabular-nums">
                           {g.value.toFixed(0)}%
                         </span>

@@ -216,12 +216,12 @@ const MovieDetail = () => {
 
             <div className="flex flex-wrap items-center gap-2">
               {movie.year && (
-                <span className="text-[14px] text-gray-300">{movie.year}</span>
+                <span className="text-[14px] text-muted">{movie.year}</span>
               )}
               {movie.genres?.map((g) => (
                 <span
                   key={g}
-                  className="rounded-full border border-border bg-surface/70 px-3 py-[3px] text-[12px] text-gray-200"
+                  className="rounded-full border border-border bg-surface/70 px-3 py-[3px] text-[12px] text-muted"
                 >
                   {g}
                 </span>
@@ -229,7 +229,7 @@ const MovieDetail = () => {
             </div>
 
             {movie.overview && (
-              <p className="text-[15px] leading-relaxed text-gray-200">
+              <p className="text-[15px] leading-relaxed text-primary">
                 {longOverview && !expanded
                   ? `${movie.overview.slice(0, 320)}… `
                   : movie.overview}

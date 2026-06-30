@@ -34,7 +34,7 @@ const MethodSelector: FC<MethodSelectorProps> = ({
           title={METHOD_META[method].blurb}
           onClick={() => onChange(method)}
           className={cn(
-            "vela-chip rounded-full px-4 py-[7px] text-[13.5px] font-medium text-gray-200",
+            "vela-chip rounded-full px-4 py-[7px] text-[13.5px] font-medium text-muted",
             active && "vela-chip--active"
           )}
         >

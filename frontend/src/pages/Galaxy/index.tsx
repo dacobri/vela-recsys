@@ -112,7 +112,7 @@ const Galaxy = () => {
           <select
             value={nClusters}
             onChange={(e) => setNClusters(Number(e.target.value))}
-            className="rounded-xl border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent/60"
+            className="rounded-xl border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent/60 focus-visible:ring-2 focus-visible:ring-accent/70"
           >
             {[4, 6, 8, 10, 12].map((n) => (
               <option key={n} value={n}>
@@ -130,7 +130,11 @@ const Galaxy = () => {
       ) : !data || data.points.length === 0 ? (
         <PanelState
           title="No galaxy to show"
-          message="The backend returned no points. Make sure the clustering / projection endpoint is ready."
+          message={
+            import.meta.env.DEV
+              ? "The backend returned no points. Make sure the clustering / projection endpoint is ready."
+              : "There's nothing to map here just yet."
+          }
         />
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -142,7 +146,7 @@ const Galaxy = () => {
                   <XAxis
                     type="number"
                     dataKey="x"
-                    tick={{ fill: "#5b5570", fontSize: 11 }}
+                    tick={{ fill: "#8b84a3", fontSize: 11 }}
                     axisLine={{ stroke: "#2A2540" }}
                     tickLine={false}
                     name="x"
@@ -150,7 +154,7 @@ const Galaxy = () => {
                   <YAxis
                     type="number"
                     dataKey="y"
-                    tick={{ fill: "#5b5570", fontSize: 11 }}
+                    tick={{ fill: "#8b84a3", fontSize: 11 }}
                     axisLine={{ stroke: "#2A2540" }}
                     tickLine={false}
                     name="y"
@@ -254,7 +258,7 @@ const Galaxy = () => {
                 {series.map((s) => (
                   <li
                     key={s.cluster}
-                    className="flex items-center gap-2 text-[13.5px] text-gray-200"
+                    className="flex items-center gap-2 text-[13.5px] text-muted"
                   >
                     <span
                       className="h-3 w-3 shrink-0 rounded-full"

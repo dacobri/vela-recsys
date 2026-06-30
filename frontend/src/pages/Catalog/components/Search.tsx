@@ -24,7 +24,7 @@ const Search: React.FC<SearchProps> = ({ setQuery }) => {
     >
       <input
         type="text"
-        className="py-[10px] pl-[20px] pr-[40px] rounded-full outline-none w-[300px] md:w-[340px] shadow-md transition-all duration-300 bg-surface border border-border text-primary placeholder:text-muted focus:border-accent/60"
+        className="py-[10px] pl-[20px] pr-[40px] rounded-full outline-none w-[300px] md:w-[340px] shadow-md transition-all duration-300 bg-surface border border-border text-primary placeholder:text-muted focus:border-accent/60 focus-visible:ring-2 focus-visible:ring-accent/70"
         onChange={(e) => setSearch(e.target.value)}
         value={search}
         placeholder={`Search ${category === "movie" ? "movies" : "tv series"}`}

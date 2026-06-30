@@ -21,7 +21,7 @@ const DiversitySlider: FC<DiversitySliderProps> = ({
 }) => (
   <label className={cn("flex items-center gap-3", className)}>
     <span className="whitespace-nowrap text-[13.5px] text-muted">
-      Diversity
+      Diversity (λ)
     </span>
     <input
       type="range"

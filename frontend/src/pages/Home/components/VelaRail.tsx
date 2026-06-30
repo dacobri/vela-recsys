@@ -58,7 +58,7 @@ const VelaRail: FC<VelaRailProps> = ({ title, userId, method, k = 12 }) => {
         </div>
         <Link
           to="/recommend"
-          className="flex items-center gap-1 rounded-full border border-border px-3 py-1 text-[13px] text-gray-300 transition-all duration-300 hover:-translate-y-1 hover:border-accent/60 hover:text-primary"
+          className="flex items-center gap-1 rounded-full border border-border px-3 py-1 text-[13px] text-muted transition-all duration-300 hover:-translate-y-1 hover:border-accent/60 hover:text-primary"
         >
           Tune <LuChevronRight className="text-[14px]" />
         </Link>
